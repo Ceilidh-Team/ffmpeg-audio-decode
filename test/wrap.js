@@ -1,4 +1,4 @@
-/* global describe, it, after */
+/* global describe, it */
 'use strict'
 
 require('should')
@@ -61,10 +61,4 @@ describe('createContext', function () {
   it('should throw when given malformed data', function () {
     (() => ffmpegAudioDecode.createContext(close, readMalformed)).should.throw()
   })
-})
-
-after(function () {
-  // Forcibly garbage collect to ensure the hanging objects from these tests get cleaned.
-  require('v8').setFlagsFromString('--expose-gc')
-  require('vm').runInNewContext('gc')()
 })
