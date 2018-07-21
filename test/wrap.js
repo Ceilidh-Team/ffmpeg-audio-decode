@@ -1,4 +1,4 @@
-/* global describe, it */
+/* global describe, it, after */
 'use strict'
 
 require('should')
@@ -51,7 +51,7 @@ describe('createContext', function () {
     }).should.not.throw()
   })
   it('should throw when given a seek function with insufficient arity', function () {
-    (() => ffmpegAudioDecode.createContext(close, read, arity0, length)).should.throw(/'seek'/)
+    (() => ffmpegAudioDecode.createContext(close, read, arity0, length)).should.throw(/'seek'/);
     (() => ffmpegAudioDecode.createContext(close, read, arity1, length)).should.throw(/'seek'/)
   })
 })
