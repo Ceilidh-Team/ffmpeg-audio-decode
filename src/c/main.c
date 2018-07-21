@@ -6,13 +6,13 @@
 #include <libavformat/avformat.h>
 #include <node_api.h>
 
-#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #include <stdio.h>
 #define TRACE(args...) do { fprintf(stderr, args); fflush(stderr); } while(0)
 #else
-#define TRACE(args)...
+#define TRACE(args...) do { } while(0)
 #endif
 
 _Static_assert(LIBAVCODEC_VERSION_MAJOR == 58
@@ -27,33 +27,40 @@ _Static_assert(LIBAVFORMAT_VERSION_MAJOR == 58
 // Helpers for throwing, shortening code
 #define STRINGIFY_INTERNAL__(val) #val
 #define STRINGIFY__(val) STRINGIFY_INTERNAL__(val)
-#define ext_throw(env, message) napi_throw_error((env), "line " STRINGIFY__(__LINE__), (message))
-#define ext_throw_auto(env) do { \
-    const napi_extended_error_info *info; \
+
+#define EXT_THROW(env, message) napi_throw_error((env), "line " STRINGIFY__(__LINE__), (message))
+#define EXT_THROW_AUTO(env) do {            \
+    const napi_extended_error_info *info;   \
     napi_get_last_error_info((env), &info); \
-    ext_throw(env, info->error_message); \
+    EXT_THROW(env, info->error_message);    \
 } while (0)
 
 #define EXT_TRY(env, call) do { \
-    if ((call) != napi_ok) { \
-        ext_throw_auto((env)); \
-        return; \
-    } \
+    if ((call) != napi_ok) {    \
+        EXT_THROW_AUTO((env));  \
+        return;                 \
+    }                           \
 } while(0)
 #define EXT_TRYRET(env, call, res) do { \
-    if ((call) != napi_ok) { \
-        ext_throw_auto((env)); \
-        return (res); \
-    } \
+    if ((call) != napi_ok) {            \
+        EXT_THROW_AUTO((env));          \
+        return (res);                   \
+    }                                   \
 } while(0)
 #define EXT_TRYGOTO(env, call, label) do { \
-    if ((call) != napi_ok) { \
-        ext_throw_auto(env); \
-        goto label; \
-    } \
+    if ((call) != napi_ok) {               \
+        EXT_THROW_AUTO(env);               \
+        goto label;                        \
+    }                                      \
 } while(0)
 
+typedef struct allocated_objects__ {
+    bool context_freed;
+    AVIOContext *io_context;
+    uint8_t *buffer;
+} *allocated_objects;
 typedef struct fn_env__ {
+    struct allocated_objects__ allocations;
     napi_env env;
     napi_ref close;
     napi_ref read;
@@ -63,7 +70,6 @@ typedef struct fn_env__ {
 
 static void finalize(napi_env env, void *data, void *hint) {
     fn_env fn_env = hint;
-    fn_env->env = env;
 
     if (fn_env->close != NULL) {
         TRACE("finalize|release close\n");
@@ -82,22 +88,25 @@ static void finalize(napi_env env, void *data, void *hint) {
         EXT_TRYGOTO(env, napi_delete_reference(env, fn_env->length), napi_fail);
     }
 
-napi_fail:
-    TRACE("finalize|free fn_env %p\n", hint);
-    free(fn_env);
-
+napi_fail:;
     AVFormatContext *context = data;
     if (context != NULL) {
-        if (context->pb != NULL) {
-            if (context->pb->buffer != NULL) {
-                av_freep(&context->pb->buffer);
-            }
-
+        if (context->pb != NULL && context->pb->buffer != NULL && context->pb->buffer == fn_env->allocations.buffer) {
+            TRACE("finalize|free allocated buffer\n");
+            av_freep(&context->pb->buffer);
+        }
+        if (context->pb != NULL && context->pb == fn_env->allocations.io_context) {
+            TRACE("finalize|free allocated io context\n");
             avio_context_free(&context->pb);
         }
-
-        avformat_free_context(context);
+        if (!fn_env->allocations.context_freed) {
+            TRACE("finalize|free context\n");
+            avformat_free_context(context);
+        }
     }
+
+    TRACE("finalize|free fn_env %p\n", hint);
+    free(fn_env);
 
     TRACE("finalize|success\n");
 }
@@ -130,6 +139,14 @@ static int read(void *opaque, uint8_t *buf, int len) {
     }
 
     TRACE("read|call success\n");
+
+    napi_valuetype type;
+    EXT_TRYRET(fns->env, napi_typeof(fns->env, res, &type), AVERROR_EXTERNAL);
+    if (type != napi_number) {
+        EXT_THROW(fns->env, "Read did not return number");
+        return AVERROR_EXTERNAL;
+    }
+
     EXT_TRYRET(fns->env, napi_get_value_int32(fns->env, res, &len), AVERROR_EXTERNAL);
     return len;
 }
@@ -153,6 +170,13 @@ static int64_t seek_or_len(void *opaque, int64_t offset, int whence) {
         napi_value res;
         EXT_TRYRET(fn_env->env, napi_call_function(fn_env->env, NULL, seek_fn, 2, argv, &res), AVERROR_EXTERNAL);
 
+        napi_valuetype type;
+        EXT_TRYRET(fn_env->env, napi_typeof(fn_env->env, res, &type), AVERROR_EXTERNAL);
+        if (type != napi_number) {
+            EXT_THROW(fn_env->env, "Seek did not return number");
+            return AVERROR_EXTERNAL;
+        }
+
         EXT_TRYRET(fn_env->env, napi_get_value_int64(fn_env->env, res, &offset), AVERROR_EXTERNAL);
         return offset;
     } else {
@@ -167,6 +191,13 @@ static int64_t seek_or_len(void *opaque, int64_t offset, int whence) {
         napi_value res;
         EXT_TRYRET(fn_env->env, napi_call_function(fn_env->env, NULL, length_fn, 0, NULL, &res), AVERROR_EXTERNAL);
 
+        napi_valuetype type;
+        EXT_TRYRET(fn_env->env, napi_typeof(fn_env->env, res, &type), AVERROR_EXTERNAL);
+        if (type != napi_number) {
+            EXT_THROW(fn_env->env, "Length did not return number");
+            return AVERROR_EXTERNAL;
+        }
+
         EXT_TRYRET(fn_env->env, napi_get_value_int64(fn_env->env, res, &offset), AVERROR_EXTERNAL);
         return offset;
     }
@@ -178,7 +209,7 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     void *unused_data;
     if (napi_get_cb_info(env, info, &argc, argv, &unused_this, &unused_data) != napi_ok) {
         TRACE("create_context|cb_info fail\n");
-        ext_throw_auto(env);
+        EXT_THROW_AUTO(env);
         goto err;
     }
 
@@ -197,14 +228,16 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     has_length = !has_length; // ditto
 
     TRACE("create_context|alloc av\n");
-    const size_t initial_buffer_size = 4096; // 4 KB
+    const size_t initial_buffer_size = 4 * 1024; // 4 KB
     uint8_t *buffer = av_malloc(initial_buffer_size);
+    fn_env->allocations.buffer = buffer;
 
     AVIOContext *io_context = avio_alloc_context(
         buffer, initial_buffer_size, 0,
         fn_env,
         read, NULL, (has_seek || has_length) ? seek_or_len : NULL
     );
+    fn_env->allocations.io_context = io_context;
 
     AVFormatContext *context = avformat_alloc_context();
     context->pb = io_context;
@@ -226,9 +259,18 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     }
 
     TRACE("create_context|open\n");
-    if (avformat_open_input(&context, "", NULL, NULL) < 0) {
+    int code = avformat_open_input(&context, "", NULL, NULL);
+    if (code < 0) {
+        // avformat_open_input frees context on failure, but the finalizer is already
+        // set in napi.
+        fn_env->allocations.context_freed = true;
+
+        const size_t err_buffer_len = 1024;
+        char err[err_buffer_len] = { 0 };
+        av_strerror(code, err, err_buffer_len);
+
         TRACE("create_context|open failed\n");
-        ext_throw(env, "Unable to open input");
+        EXT_THROW(env, err);
         goto err;
     }
 
@@ -243,11 +285,11 @@ err:
 static napi_value module_init(napi_env env, napi_value exports) {
     // Ensure we're running against the same version of ffmpeg we compiled against.
     if (LIBAVCODEC_VERSION_INT != avcodec_version()) {
-        ext_throw(env, "Compiled and runtime avcodec version mismatch");
+        EXT_THROW(env, "Compiled and runtime avcodec version mismatch");
         return NULL;
     }
     if (LIBAVFORMAT_VERSION_INT != avformat_version()) {
-        ext_throw(env, "Compiled and runtime avformat version mismatch");
+        EXT_THROW(env, "Compiled and runtime avformat version mismatch");
         return NULL;
     }
 
