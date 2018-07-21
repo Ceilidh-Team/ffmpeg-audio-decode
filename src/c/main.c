@@ -56,6 +56,7 @@ _Static_assert(LIBAVFORMAT_VERSION_MAJOR == 58
 
 typedef struct allocated_objects__ {
     bool context_freed;
+    bool context_input_open;
     AVIOContext *io_context;
     uint8_t *buffer;
 } *allocated_objects;
@@ -101,7 +102,11 @@ napi_fail:;
         }
         if (!fn_env->allocations.context_freed) {
             TRACE("finalize|free context\n");
-            avformat_free_context(context);
+            if (fn_env->allocations.context_input_open) {
+                avformat_close_input(&context);
+            } else {
+                avformat_free_context(context);
+            }
         }
     }
 
@@ -274,6 +279,7 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
         goto err;
     }
 
+    fn_env->allocations.context_input_open = true;
     return external;
 
 err_unwrapped_alloc:
