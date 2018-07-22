@@ -55,7 +55,7 @@ typedef struct allocated_objects__ {
 } *allocated_objects;
 typedef struct fn_env__ {
     struct allocated_objects__ allocations;
-    napi_env env;
+    napi_env env;   // make the hacky assumption we only ever get called in response to js
     napi_ref close;
     napi_ref read;
     napi_ref seek;
@@ -163,7 +163,7 @@ static int64_t seek_or_len(void *opaque, int64_t offset, int whence) {
 
     napi_value fn;
     TRYRET_NAPI(fn_env->env, napi_get_reference_value(fn_env->env, fn_ref, &fn), AVERROR_EXTERNAL);
-    TRYRET_NAPI(fn_env->env, napi_call_function(fn_env->env, NULL, fn, 2, argv, &fn), AVERROR_EXTERNAL);
+    TRYRET_NAPI(fn_env->env, napi_call_function(fn_env->env, NULL, fn, argc, argv, &fn), AVERROR_EXTERNAL);
     if (!check_type(fn_env->env, fn, napi_number)) {
         THROW_TYPE(fn_env->env, "Seek or length did not return number");
         return AVERROR_EXTERNAL;
