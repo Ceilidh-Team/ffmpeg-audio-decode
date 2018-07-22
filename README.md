@@ -3,6 +3,10 @@
 A small native module which decodes an arbitrary stream of audio data into a
 stream of PCM samples using FFmpeg.
 
+## Build Status
+
+The master branch is evergreen thanks to [bors-ng](https://bors.tech/).
+
 ## License
 
 This software is distributed under the terms of both the
