@@ -10,5 +10,4 @@ os:
 cache:
   directories:
     - node_modules
-    - $HOME/Library/Caches/Homebrew
     - /usr/local/Cellar/ffmpeg
