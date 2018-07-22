@@ -3,4 +3,4 @@ export function createContext(
   read: (buffer: Buffer) => number,
   seek?: (pos: number, whence: number) => number,
   length?: () => number
-): External;
+): any;
