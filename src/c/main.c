@@ -174,9 +174,9 @@ static int64_t seek_or_len(void *opaque, int64_t offset, int whence) {
 
 static napi_value create_context(napi_env env, napi_callback_info info) {
     size_t argc = 4;
-    napi_value argv[4], unused_this;
+    napi_value argv[4], this;
     void *unused_data;
-    if (napi_get_cb_info(env, info, &argc, argv, &unused_this, &unused_data) != napi_ok) {
+    if (napi_get_cb_info(env, info, &argc, argv, &this, &unused_data) != napi_ok) {
         EXT_THROW_AUTO(env);
         goto err;
     }
@@ -241,8 +241,8 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     AVFormatContext *context = avformat_alloc_context();
     context->pb = io_context;
 
-    napi_value external;
-    EXT_TRYGOTO(env, napi_create_external(env, context, finalize, fn_env, &external), err);
+    napi_ref object_ref;
+    EXT_TRYGOTO(env, napi_wrap(env, this, context, finalize, fn_env, &object_ref), err);
 
     EXT_TRYGOTO(env, napi_create_reference(env, argv[0], 1, &fn_env->close), err);
     EXT_TRYGOTO(env, napi_create_reference(env, argv[1], 1, &fn_env->read), err);
@@ -270,7 +270,10 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     // now that avformat_open_input succeeded, we have to close it differently
     // than if we hadn't opened
     fn_env->allocations.context_input_open = true;
-    return external;
+
+    napi_value object;
+    EXT_TRYGOTO(env, napi_get_reference_value(env, object_ref, &object), err);
+    return object;
 
 err_unwrapped_alloc:
     free(fn_env);
@@ -294,11 +297,11 @@ static napi_value module_init(napi_env env, napi_value exports) {
     };
 
     napi_value av_context_class;
-    EXT_TRYRET(env, napi_define_class(env, "AvContext", NAPI_AUTO_LENGTH, create_context, NULL, num_properties, properties, &av_context_class), NULL);
+    EXT_TRYRET(env, napi_define_class(env, "Decoder", NAPI_AUTO_LENGTH, create_context, NULL, num_properties, properties, &av_context_class), NULL);
 
     const size_t num_descriptors = 1;
     napi_property_descriptor descriptors[num_descriptors] = {
-        { "AvContext", NULL, NULL, NULL, NULL, av_context_class, napi_default, NULL }
+        { "Decoder", NULL, NULL, NULL, NULL, av_context_class, napi_default, NULL }
     };
     EXT_TRYRET(env, napi_define_properties(env, exports, num_descriptors, descriptors), NULL);
 
