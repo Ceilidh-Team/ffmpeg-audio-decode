@@ -9,10 +9,10 @@
   "private": true,
   "scripts": {
     "lint": "standard \"src/js/**.js\" && dtslint types",
-    "pretest": "node-gyp rebuild",
-    "test": "npm run lint && mocha",
+    "pretest": "node-gyp rebuild && npm run lint",
+    "test": "mocha",
     "pretest-fulltrace": "npm run pretest",
-    "test-fulltrace": "npm run lint && mocha --full-trace"
+    "test-fulltrace": "mocha --full-trace"
   },
   "devDependencies": {
     "@types/node": "^10.5.2",
