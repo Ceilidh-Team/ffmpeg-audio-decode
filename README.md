@@ -4,7 +4,7 @@ A small native module dynamically linked to ffmpeg, intended to decode an arbitr
 
 ## License
 
-This package is available under either of the Apache License, Version 2.0 or the MIT license at your option.
+This software is available under either of the Apache License, Version 2.0 or the MIT license at your option.
 
 [ffmpeg][ffmpeg-home] is used under the [LGPL v2.1][LGPL2.1]. You may download ffmpeg's source [here][ffmpeg-download].
 
