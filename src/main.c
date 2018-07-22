@@ -55,7 +55,7 @@ typedef struct allocated_objects__ {
 } *allocated_objects;
 typedef struct fn_env__ {
     struct allocated_objects__ allocations;
-    napi_env env;
+    napi_env env;   // make the hacky assumption we only ever get called in response to js
     napi_ref close;
     napi_ref read;
     napi_ref seek;
