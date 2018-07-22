@@ -208,6 +208,23 @@ static int64_t seek_or_len(void *opaque, int64_t offset, int whence) {
     }
 }
 
+static bool check_type(napi_env env, napi_value value, napi_valuetype expected) {
+    napi_valuetype actual;
+    EXT_TRYRET(env, napi_typeof(env, value, &actual), false);
+
+    return expected == actual;
+}
+static bool check_arity(napi_env env, napi_value fn, int expected) {
+    napi_value length;
+    EXT_TRYRET(env, napi_create_string_utf8(env, "length", 6, &length), false);
+    EXT_TRYRET(env, napi_get_property(env, fn, length, &length), false);
+
+    int actual;
+    EXT_TRYRET(env, napi_get_value_int32(env, length, &actual), false);
+
+    return actual >= expected;
+}
+
 static napi_value create_context(napi_env env, napi_callback_info info) {
     size_t argc = 4;
     napi_value argv[4], unused_this;
@@ -218,8 +235,41 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
         goto err;
     }
 
-    // Assume we were passed a close, read, seek, and length function (in that order),
-    // with the last two optionally null. Type checking will be the job of Javascript.
+    // check argument count (we take 2-4)
+    if (argc < 2) {
+        EXT_THROW(env, "Not enough arguments");
+    }
+
+    // 'close' argument
+    if (!check_type(env, argv[0], napi_function)) {
+        EXT_THROW(env, "'close' argument must be a function");
+    }
+    // 'read' argument
+    if (!check_type(env, argv[1], napi_function) || !check_arity(env, argv[1], 1)) {
+        EXT_THROW(env, "'read' argument must be a function taking at least 1 argument");
+        goto err;
+    }
+    // 'seek' argument
+    if (argc >= 3) {
+        napi_valuetype type;
+        EXT_TRYGOTO(env, napi_typeof(env, argv[2], &type), err);
+
+        if (type != napi_undefined && (type != napi_function || !check_arity(env, argv[2], 2))) {
+            EXT_THROW(env, "'seek' argument must be a function taking at least 2 arguments");
+            goto err;
+        }
+    }
+    // 'length' argument
+    if (argc >= 4) {
+        napi_valuetype type;
+        EXT_TRYGOTO(env, napi_typeof(env, argv[3], &type), err);
+
+        if (type != napi_undefined && type != napi_function) {
+            EXT_THROW(env, "'length' argument must be a function");
+            goto err;
+        }
+    }
+
     fn_env fn_env = calloc(1, sizeof(*fn_env));
     fn_env->env = env;
 
@@ -299,9 +349,16 @@ static napi_value module_init(napi_env env, napi_value exports) {
         return NULL;
     }
 
+    const size_t num_properties = 0;
+    napi_property_descriptor properties[num_properties] = {
+    };
+
+    napi_value av_context_class;
+    EXT_TRYRET(env, napi_define_class(env, "AvContext", NAPI_AUTO_LENGTH, create_context, NULL, num_properties, properties, &av_context_class), NULL);
+
     const size_t num_descriptors = 1;
     napi_property_descriptor descriptors[num_descriptors] = {
-        { "createContext", NULL, create_context, NULL, NULL, NULL, napi_default, NULL }
+        { "AvContext", NULL, NULL, NULL, NULL, av_context_class, napi_default, NULL }
     };
     EXT_TRYRET(env, napi_define_properties(env, exports, num_descriptors, descriptors), NULL);
 
