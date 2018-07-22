@@ -18,11 +18,11 @@
 _Static_assert(LIBAVCODEC_VERSION_MAJOR == 58
                && LIBAVCODEC_VERSION_MINOR >= 18
                && (LIBAVCODEC_VERSION_MINOR > 18 || LIBAVCODEC_VERSION_MICRO >= 100),
-               "package written against libavcodec 58.18.100");
+               "software written against libavcodec 58.18.100");
 _Static_assert(LIBAVFORMAT_VERSION_MAJOR == 58
                && LIBAVFORMAT_VERSION_MINOR >= 12
                && (LIBAVFORMAT_VERSION_MINOR > 12 || LIBAVFORMAT_VERSION_MICRO >= 100),
-               "package written against libavformat 58.12.100");
+               "software written against libavformat 58.12.100");
 
 // Helpers for throwing, shortening code
 #define STRINGIFY_INTERNAL__(val) #val
@@ -291,11 +291,11 @@ err:
 static napi_value module_init(napi_env env, napi_value exports) {
     // Ensure we're running against the same version of ffmpeg we compiled against.
     if (LIBAVCODEC_VERSION_INT != avcodec_version()) {
-        EXT_THROW(env, "Compiled and runtime avcodec version mismatch");
+        EXT_THROW(env, "Runtime and compile time avcodec version mismatch");
         return NULL;
     }
     if (LIBAVFORMAT_VERSION_INT != avformat_version()) {
-        EXT_THROW(env, "Compiled and runtime avformat version mismatch");
+        EXT_THROW(env, "Runtime and compile time avformat version mismatch");
         return NULL;
     }
 
