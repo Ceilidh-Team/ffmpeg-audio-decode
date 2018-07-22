@@ -13,6 +13,6 @@ This software uses code of [FFmpeg](https://ffmpeg.org) licensed under the
 [LGPLv2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html) and its
 source can be downloaded [here](https://www.ffmpeg.org/download.html).
 
-If you wish for your software to not be under the GPL license, ensure that your
-build of FFmpeg conforms to the
-[license compliance checklist](https://www.ffmpeg.org/legal.html).
+If you are distributing a program which uses this software and it is not
+licensed under the GPL license, ensure that your build of FFmpeg follows the
+[license compliance checklist](https://www.ffmpeg.org/legal.html) here.
