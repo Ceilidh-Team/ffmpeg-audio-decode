@@ -47,16 +47,12 @@ describe('new Decoder', function () {
     (() => new Decoder(close, read, seek, length)).should.not.throw()
   })
   it('should not throw for undefined in arguments 3 and 4', function () {
-    (function () {
-      new Decoder(close, read, undefined, length)
-      new Decoder(close, read, seek, undefined)
-    }).should.not.throw()
+    (() => new Decoder(close, read, undefined, length)).should.not.throw();
+    (() => new Decoder(close, read, seek, undefined)).should.not.throw()
   })
   it('should not throw for given seek and missing length or vice versa', function () {
-    (function () {
-      new Decoder(close, read, undefined, length)
-      new Decoder(close, read, seek, undefined)
-    }).should.not.throw()
+    (() => new Decoder(close, read, undefined, length)).should.not.throw();
+    (() => new Decoder(close, read, seek, undefined)).should.not.throw()
   })
   it('should throw when given a seek function with insufficient arity', function () {
     (() => new Decoder(close, read, arity0, length)).should.throw(/'seek'/);
@@ -67,7 +63,7 @@ describe('new Decoder', function () {
     (() => new Decoder(close, readMalformed)).should.throw()
   })
 
-  it('should be of its own type', function() {
+  it('should be of its own type', function () {
     ((new Decoder(close, read)) instanceof Decoder).should.be.true()
   })
 })

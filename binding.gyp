@@ -3,7 +3,7 @@
         {
             'target_name': 'binding',
             'sources': [
-                'src/c/main.c'
+                'src/main.c'
             ],
             'cflags': [
                 '-std=c11'
