@@ -21,7 +21,7 @@ function readMalformed (buf) {
 function seek (pos, whence) { return -1 }
 function length () { return -1 }
 
-describe('createContext', function () {
+describe('new AvContext', function () {
   it('should throw when given too few arguments', function () {
     (() => new AvContext()).should.throw();
     (() => new AvContext(null)).should.throw()
@@ -65,5 +65,9 @@ describe('createContext', function () {
 
   it('should throw when given malformed data', function () {
     (() => new AvContext(close, readMalformed)).should.throw()
+  })
+
+  it('should be of its own type', function() {
+    ((new AvContext(close, read)) instanceof AvContext).should.be.true()
   })
 })
