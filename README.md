@@ -18,5 +18,6 @@ This software uses code of [FFmpeg](https://ffmpeg.org) licensed under the
 source can be downloaded [here](https://www.ffmpeg.org/download.html).
 
 If you are distributing a program which uses this software and it is not
-licensed under the GPL license, ensure that your build of FFmpeg follows the
-[license compliance checklist](https://www.ffmpeg.org/legal.html) here.
+licensed under the GPL license, we recommend you ensure your build of FFmpeg
+follows the license compliance checklist
+[here](https://www.ffmpeg.org/legal.html).
