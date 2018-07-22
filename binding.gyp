@@ -10,8 +10,8 @@
             ],
             'link_settings': {
                 'libraries': [
-                    '-lavcodec.58.18.100',
-                    '-lavformat.58.12.100'
+                    '-lavcodec.58',
+                    '-lavformat.58'
                 ]
             }
         }
