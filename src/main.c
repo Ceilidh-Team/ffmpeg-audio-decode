@@ -163,7 +163,7 @@ static int64_t seek_or_len(void *opaque, int64_t offset, int whence) {
 
     napi_value fn;
     TRYRET_NAPI(fn_env->env, napi_get_reference_value(fn_env->env, fn_ref, &fn), AVERROR_EXTERNAL);
-    TRYRET_NAPI(fn_env->env, napi_call_function(fn_env->env, NULL, fn, 2, argv, &fn), AVERROR_EXTERNAL);
+    TRYRET_NAPI(fn_env->env, napi_call_function(fn_env->env, NULL, fn, argc, argv, &fn), AVERROR_EXTERNAL);
     if (!check_type(fn_env->env, fn, napi_number)) {
         THROW_TYPE(fn_env->env, "Seek or length did not return number");
         return AVERROR_EXTERNAL;
