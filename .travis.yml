@@ -1,0 +1,8 @@
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ffmpeg --without-gpl; fi
+
+language: "node_js"
+node_js:
+  - "8"
+os:
+  - osx
