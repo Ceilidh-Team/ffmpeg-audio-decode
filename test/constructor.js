@@ -54,6 +54,6 @@ describe('new Decoder', function () {
   })
 
   it('should be instanceof Decoder', function () {
-    ((new Decoder(close, read)) instanceof Decoder).should.be.true()
+    new Decoder(close, read).should.be.instanceof(Decoder)
   })
 })
