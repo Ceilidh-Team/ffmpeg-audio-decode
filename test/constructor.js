@@ -22,8 +22,8 @@ function length () { return emptyFlac.length }
 
 describe('new Decoder', function () {
   it('should throw when given too few arguments', function () {
-    (() => new Decoder()).should.throw();
-    (() => new Decoder(null)).should.throw()
+    (() => new Decoder()).should.throw(TypeError);
+    (() => new Decoder(null)).should.throw(TypeError)
   })
   it('should throw when given non-function for close', function () {
     (() => new Decoder(null, read)).should.throw(/'close'/)
@@ -32,7 +32,7 @@ describe('new Decoder', function () {
     (() => new Decoder(close, null)).should.throw(/'read'/)
   })
   it('should throw when given non-function for close and read', function () {
-    (() => new Decoder(null, null)).should.throw()
+    (() => new Decoder(null, null)).should.throw(TypeError)
   })
   it('should throw when given a read function with insufficient arity', function () {
     (() => new Decoder(close, arity0)).should.throw(/'read'/)
@@ -49,8 +49,8 @@ describe('new Decoder', function () {
     (() => new Decoder(close, read, seek, length)).should.not.throw()
   })
   it('should throw when given malformed data', function () {
-    (() => new Decoder(close, readMalformed)).should.throw();
-    (() => new Decoder(close, readMalformed, undefined, length)).should.throw()
+    (() => new Decoder(close, readMalformed)).should.throw(Error);
+    (() => new Decoder(close, readMalformed, undefined, length)).should.throw(Error)
   })
 
   it('should be instanceof Decoder', function () {
