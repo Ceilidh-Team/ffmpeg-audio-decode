@@ -1,6 +1,6 @@
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:mc3man/trusty-media; sudo apt-get install -y ffmpeg; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ffmpeg --without-gpl; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install ffmpeg --without-gpl --without-x264; fi
 
 language: node_js
 node_js:
