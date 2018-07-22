@@ -241,8 +241,7 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     AVFormatContext *context = avformat_alloc_context();
     context->pb = io_context;
 
-    napi_ref object_ref;
-    EXT_TRYGOTO(env, napi_wrap(env, this, context, finalize, fn_env, &object_ref), err);
+    EXT_TRYGOTO(env, napi_wrap(env, this, context, finalize, fn_env, NULL), err);
 
     EXT_TRYGOTO(env, napi_create_reference(env, argv[0], 1, &fn_env->close), err);
     EXT_TRYGOTO(env, napi_create_reference(env, argv[1], 1, &fn_env->read), err);
@@ -270,10 +269,7 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     // now that avformat_open_input succeeded, we have to close it differently
     // than if we hadn't opened
     fn_env->allocations.context_input_open = true;
-
-    napi_value object;
-    EXT_TRYGOTO(env, napi_get_reference_value(env, object_ref, &object), err);
-    return object;
+    return this;
 
 err_unwrapped_alloc:
     free(fn_env);
