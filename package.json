@@ -1,7 +1,7 @@
 {
   "name": "ffmpeg-audio-decode",
   "version": "0.0.0",
-  "description": "Decode arbitrary audio to PCM using ffmpeg",
+  "description": "Decode arbitrary audio to PCM using FFmpeg",
   "main": "src/js/index",
   "types": "types",
   "author": "JustANull",

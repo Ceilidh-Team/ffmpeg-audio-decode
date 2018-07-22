@@ -1,7 +1,7 @@
 # ffmpeg-audio-decode
 
-A small native module dynamically linked to ffmpeg, intended to decode an
-arbitrary stream of audio source into a stream of PCM samples.
+A small native module which decodes an arbitrary stream of audio data into a
+stream of PCM samples using FFmpeg.
 
 ## License
 
