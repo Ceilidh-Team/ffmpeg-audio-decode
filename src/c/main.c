@@ -317,7 +317,7 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
     int code = avformat_open_input(&context, "", NULL, NULL);
     if (code < 0) {
         // avformat_open_input frees context on failure, but the finalizer is already
-        // set in napi.
+        // set in napi
         fn_env->allocations.context_freed = true;
 
         const size_t err_buffer_len = 1024;
@@ -329,6 +329,8 @@ static napi_value create_context(napi_env env, napi_callback_info info) {
         goto err;
     }
 
+    // now that avformat_open_input succeeded, we have to close it differently
+    // than if we hadn't opened
     fn_env->allocations.context_input_open = true;
     return external;
 
