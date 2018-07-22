@@ -1,5 +1,6 @@
 before_install:
   - brew install ffmpeg --without-gpl --without-x264 --without-xvid
+  - brew link ffmpeg
 
 language: node_js
 node_js:
