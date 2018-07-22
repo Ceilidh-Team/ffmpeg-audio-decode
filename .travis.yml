@@ -8,6 +8,11 @@ node_js:
 os:
   - osx
 
+branches:
+  only:
+    - staging
+    - trying
+
 cache:
   directories:
     - node_modules
