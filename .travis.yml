@@ -1,6 +1,6 @@
 before_install:
   - brew install ffmpeg --without-gpl --without-x264 --without-xvid
-  - brew link ffmpeg
+  - brew link nasm pkg-config texi2html lame ffmpeg
 
 language: node_js
 node_js:
@@ -11,4 +11,8 @@ os:
 cache:
   directories:
     - node_modules
+    - /usr/local/Cellar/nasm
+    - /usr/local/Cellar/pkg-config
+    - /usr/local/Cellar/texi2html
+    - /usr/local/Cellar/lame
     - /usr/local/Cellar/ffmpeg
