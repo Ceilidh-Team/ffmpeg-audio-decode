@@ -56,7 +56,7 @@ _Static_assert(LIBAVFORMAT_VERSION_MAJOR == 58
     napi_status status = (call);                \
     if (status != napi_ok) {                    \
         if (status != napi_pending_exception) { \
-            THROW_AUTO(env);                    \
+            THROW_AUTO((env));                  \
         }                                       \
         goto label;                             \
     }                                           \
@@ -234,7 +234,7 @@ static napi_value create_decoder(napi_env env, napi_callback_info info) {
     }
 
     // now that avformat_open_input succeeded, we have to close it differently
-    // than if we hadn't opened
+    // than if we hadn't opened it
     decoder->lavf_format_context_input_open = true;
 
     code = avformat_find_stream_info(context, NULL);
