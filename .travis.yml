@@ -1,6 +1,6 @@
 before_install:
   - brew install ffmpeg --without-gpl --without-x264 --without-xvid
-  - brew link nasm pkg-config texi2html lame ffmpeg
+  - brew link nasm texi2html lame ffmpeg
 
 language: node_js
 node_js:
