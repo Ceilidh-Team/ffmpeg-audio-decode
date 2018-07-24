@@ -16,7 +16,8 @@ class Decodeable {
     this.data = null
   }
   read (buffer) {
-    let moved = buffer.write(this.data.substr(this.pos), 0, this.data.length - this.pos, 'ascii')
+    let toWrite = Math.min(this.data.length - this.pos, buffer.length)
+    let moved = this.data.copy(buffer, 0, this.pos, toWrite)
     if (moved === 0) {
       return undefined
     }
@@ -40,28 +41,18 @@ class Decodeable {
   }
 }
 
-const emptyFlac = '\x66\x4c\x61\x43\x00\x00\x00\x22\x10\x00\x10\x00\xff\xff\xff\x00\x00\x00\x0a\xc4\x40\xf0\x00\x00\x00\x00\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e\x84\x00\x00\x28\x20\x00\x00\x00\x72\x65\x66\x65\x72\x65\x6e\x63\x65\x20\x6c\x69\x62\x46\x4c\x41\x43\x20\x31\x2e\x33\x2e\x30\x20\x32\x30\x31\x33\x30\x35\x32\x36\x00\x00\x00\x00'
-class GoodDecodeable extends Decodeable {
-  constructor () {
-    super(emptyFlac)
-  }
-}
-const malformedFlac = '\x67\x4d\x62\x44\x00\x00\x00\x22\x10\x00\x10\x00\xff\xff\xff\x00\x00\x00\x0a\xc4\x40\xf0\x00\x00\x00\x00\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\x09\x98\xec\xf8\x42\x7e\x84\x00\x00\x28\x20\x00\x00\x00\x72\x65\x66\x65\x72\x65\x6e\x63\x65\x20\x6c\x69\x62\x46\x4c\x41\x43\x20\x31\x2e\x33\x2e\x30\x20\x32\x30\x31\x33\x30\x35\x32\x36\x00\x00\x00\x00'
-class BadDecodeable extends Decodeable {
-  constructor () {
-    super(malformedFlac)
-  }
-}
+const emptyFlac = Buffer.from('ZkxhQwAAACIQABAA////AAAACsRA8AAAAADUHYzZjwCyBOmACZjs+EJ+hAAAKCAAAAByZWZlcmVuY2UgbGliRkxBQyAxLjMuMCAyMDEzMDUyNgAAAAA=', 'base64')
+const malformedFlac = Buffer.from('Z01iRAAAACIQABAA////AAAACsRA8AAAAADUHYzZjwCyBOmACZjs+EJ+hAAAKCAAAAByZWZlcmVuY2UgbGliRkxBQyAxLjMuMCAyMDEzMDUyNgAAAAA=', 'base64')
 
 describe('new Decoder', function () {
   it('should not throw when given well-formed data', function () {
-    (() => new Decoder(new GoodDecodeable())).should.not.throw()
+    (() => new Decoder(new Decodeable(emptyFlac))).should.not.throw()
   })
   it('should throw when given malformed data', function () {
-    (() => new Decoder(new BadDecodeable())).should.throw(Error)
+    (() => new Decoder(new Decodeable(malformedFlac))).should.throw(Error)
   })
 
   it('should be instanceof Decoder', function () {
-    new Decoder(new GoodDecodeable()).should.be.instanceof(Decoder)
+    new Decoder(new Decodeable(emptyFlac)).should.be.instanceof(Decoder)
   })
 })
