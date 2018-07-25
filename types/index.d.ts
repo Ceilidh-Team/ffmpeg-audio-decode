@@ -2,7 +2,7 @@
 declare type Whence = 0 | 1 | 2
 
 /** A stream that can be decoded by FFmpeg */
-declare interface Decodeable {
+declare interface Decodable {
   /** Close the stream, indicating that no more reading will be performed */
   close (): void
   /**
@@ -24,13 +24,51 @@ declare interface Decodeable {
 export class Decoder {
   /**
    * Construct a new Decoder from a given stream
-   * @param subject The stream to decode
+   * @param decodable object to decode
    */
-  constructor (subject: Decodeable)
+  constructor (decodable: Decodable)
 
   /**
-   * Read audio data from the decoder into a buffer
-   * @param into The buffer to read into
+   * Whether seek is legal to call
    */
-  read (into: Buffer): void
+  canSeek: boolean
+
+  /**
+   * The number of audio streams
+   */
+  streamCount: number
+
+  /**
+   * Read all metadata
+   * @returns A map from key to value of tags
+   */
+  metadata (): Map<string, string>
+
+  /**
+   * Read a single tag of metadata
+   * @param tag tag, for example 'title'
+   * @returns {string} value of the tag
+   * @returns {undefined} tag is not present
+   */
+  metadata (tag: string): string | undefined
+
+  /**
+   * Read audio data into a buffer
+   * @returns {Buffer} data is interleaved
+   * @returns {Buffer[]} data is in separate planes
+   * @returns {undefined} end of file
+   */
+  read (): Buffer | Buffer[] | undefined
+
+  /**
+   * Seek to a timestamp
+   * @throws {Error} canSeek is false
+   */
+  seek (seconds: number): void
+
+  /**
+   * Select a stream
+   * @throws {Error} id must be less than streamCount
+   */
+  selectStream (id: number): void
 }
