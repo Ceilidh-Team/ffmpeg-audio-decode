@@ -5,6 +5,7 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <node_api.h>
+#include "napi_helpers.h"
 
 // Ensure that the lavf we're building against is like the one this code is written for
 _Static_assert(LIBAVCODEC_VERSION_MAJOR == 58
@@ -15,52 +16,6 @@ _Static_assert(LIBAVFORMAT_VERSION_MAJOR == 58
                && LIBAVFORMAT_VERSION_MINOR >= 12
                && (LIBAVFORMAT_VERSION_MINOR > 12 || LIBAVFORMAT_VERSION_MICRO >= 100),
                "software written against libavformat 58.12.100");
-
-// Helpers for throwing, shortening code
-#define STRINGIFY_INTERNAL__(val) #val
-#define STRINGIFY__(val) STRINGIFY_INTERNAL__(val)
-
-#define THROW(env, message) napi_throw_error((env), "ffmpeg-audio-decode@" STRINGIFY__(__LINE__), (message))
-#define THROW_TYPE(env, message) napi_throw_type_error((env), "ffmpeg-audio-decode@" STRINGIFY__(__LINE__), (message))
-#define THROW_AUTO(env) do {                \
-    const napi_extended_error_info *info;   \
-    napi_get_last_error_info((env), &info); \
-    THROW((env), info->error_message);      \
-} while (0)
-#define THROW_AVERR(env, code) do {    \
-    const size_t buf_len = 256;        \
-    char buf[buf_len] = { 0 };         \
-    av_strerror((code), buf, buf_len); \
-    THROW((env), buf);                 \
-} while (0)
-
-#define TRY_NAPI(env, call) do {                \
-    napi_status status = (call);                \
-    if (status != napi_ok) {                    \
-        if (status != napi_pending_exception) { \
-            THROW_AUTO((env));                  \
-        }                                       \
-        return status;                          \
-    }                                           \
-} while(0)
-#define TRYRET_NAPI(env, call, res) do {        \
-    napi_status status = (call);                \
-    if (status != napi_ok) {                    \
-        if (status != napi_pending_exception) { \
-            THROW_AUTO((env));                  \
-        }                                       \
-        return (res);                           \
-    }                                           \
-} while(0)
-#define TRYGOTO_NAPI(env, call, label) do {     \
-    napi_status status = (call);                \
-    if (status != napi_ok) {                    \
-        if (status != napi_pending_exception) { \
-            THROW_AUTO((env));                  \
-        }                                       \
-        goto label;                             \
-    }                                           \
-} while(0)
 
 typedef struct Decoder__ {
     bool lavf_format_context_freed;

@@ -1,2 +1,13 @@
-build/
+# Node.js boilerplate
+
 node_modules/
+*.log
+build/**
+
+# VSCode
+
+.vscode/**
+!.vscode/c_cpp_properties.json
+
+# ffmpeg-audio-decode
+
