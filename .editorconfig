@@ -6,12 +6,12 @@ end_of_line = lf
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.{js,ts}]
+[*.{js,json,toml,ts,yml}]
 indent_style = space
 indent_size = 2
 tab_width = 2
 
-[*.c]
+[*.{c,md}]
 indent_style = space
 indent_size = 4
 tab_width = 4
