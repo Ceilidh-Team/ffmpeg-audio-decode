@@ -1,5 +1,5 @@
-#ifndef __NAPI_HELPERS_H__
-#define __NAPI_HELPERS_H__
+#ifndef NAPI_HELPERS_H
+#define NAPI_HELPERS_H
 
 #define STRINGIFY_INTERNAL__(val) #val
 
