@@ -1,5 +1,4 @@
 {
-    "editor.tabSize": 2,
     "tslint.configFile": "types/tslint.json",
     "tslint.ignoreDefinitionFiles": false
 }
