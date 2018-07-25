@@ -1,8 +1,8 @@
 /** Set from the beginning, offset from current, and set from end */
-export declare type Whence = 0 | 1 | 2
+declare type Whence = 0 | 1 | 2
 
 /** A stream that can be decoded by FFmpeg */
-export declare interface Decodeable {
+declare interface Decodeable {
   /** Close the stream, indicating that no more reading will be performed */
   close (): void
   /**
@@ -21,7 +21,7 @@ export declare interface Decodeable {
 }
 
 /** An object capable of decoding a stream using FFmpeg */
-export declare class Decoder {
+export class Decoder {
   /**
    * Construct a new Decoder from a given stream
    * @param subject The stream to decode
