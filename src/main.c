@@ -29,7 +29,7 @@ typedef struct Decoder__ {
 } *Decoder;
 
 static void finalize(napi_env env, void *data, void *hint) {
-    Decoder decoder = hint;
+    Decoder decoder = data;
 
     if (decoder->decodeable != NULL) {
         napi_value decodeable;
@@ -43,15 +43,17 @@ static void finalize(napi_env env, void *data, void *hint) {
     }
 
 napi_fail:;
-    AVFormatContext *context = data;
-    if (context != NULL) {
-        if (context->pb != NULL && context->pb->buffer != NULL && context->pb->buffer == decoder->lavf_io_buffer) {
-            av_freep(&context->pb->buffer);
-        }
-        if (context->pb != NULL && context->pb == decoder->lavf_io_context) {
-            avio_context_free(&context->pb);
-        }
-        if (!decoder->lavf_format_context_freed) {
+    if (!decoder->lavf_format_context_freed) {
+        AVFormatContext *context = decoder->lavf_format_context;
+
+        if (context != NULL) {
+            if (context->pb != NULL && context->pb->buffer != NULL && context->pb->buffer == decoder->lavf_io_buffer) {
+                av_freep(&context->pb->buffer);
+            }
+            if (context->pb != NULL && context->pb == decoder->lavf_io_context) {
+                avio_context_free(&context->pb);
+            }
+
             if (decoder->lavf_format_context_input_open) {
                 avformat_close_input(&context);
             } else {
@@ -66,81 +68,98 @@ napi_fail:;
 static int read(void *opaque, uint8_t *buf, int len) {
     Decoder decoder = opaque;
 
+    napi_handle_scope scope;
+    TRYRET_NAPI(decoder->env, napi_open_handle_scope(decoder->env, &scope), AVERROR_EXTERNAL);
+
     napi_value buffer;
-    TRYRET_NAPI(decoder->env, napi_create_external_buffer(decoder->env, len, buf, NULL, NULL, &buffer), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_create_external_buffer(decoder->env, len, buf, NULL, NULL, &buffer), err);
 
     napi_value decodeable;
-    TRYRET_NAPI(decoder->env, napi_get_reference_value(decoder->env, decoder->decodeable, &decodeable), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_get_reference_value(decoder->env, decoder->decodeable, &decodeable), err);
 
     napi_value read;
-    TRYRET_NAPI(decoder->env, napi_create_string_utf8(decoder->env, "read", 4, &read), AVERROR_EXTERNAL);
-    TRYRET_NAPI(decoder->env, napi_get_property(decoder->env, decodeable, read, &read), AVERROR_EXTERNAL);
-    TRYRET_NAPI(decoder->env, napi_call_function(decoder->env, decodeable, read, 1, &buffer, &read), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_create_string_utf8(decoder->env, "read", 4, &read), err);
+    TRYGOTO_NAPI(decoder->env, napi_get_property(decoder->env, decodeable, read, &read), err);
+    TRYGOTO_NAPI(decoder->env, napi_call_function(decoder->env, decodeable, read, 1, &buffer, &read), err);
 
     napi_valuetype type;
-    TRYRET_NAPI(decoder->env, napi_typeof(decoder->env, read, &type), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_typeof(decoder->env, read, &type), err);
     if (type == napi_undefined) {
+        TRYRET_NAPI(decoder->env, napi_close_handle_scope(decoder->env, scope), AVERROR_EXTERNAL);
         return AVERROR_EOF;
     }
 
     if (type != napi_number) {
         THROW_TYPE(decoder->env, "Read did not return number | undefined");
-        return AVERROR_EXTERNAL;
+        goto err;
     }
 
-    TRYRET_NAPI(decoder->env, napi_get_value_int32(decoder->env, read, &len), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_get_value_int32(decoder->env, read, &len), err);
+    TRYRET_NAPI(decoder->env, napi_close_handle_scope(decoder->env, scope), AVERROR_EXTERNAL);
     return len;
+
+err:
+    TRYRET_NAPI(decoder->env, napi_close_handle_scope(decoder->env, scope), AVERROR_EXTERNAL);
+    return AVERROR_EXTERNAL;
 }
 
 static int64_t seek_or_len(void *opaque, int64_t offset, int whence) {
     Decoder decoder = opaque;
 
+    napi_handle_scope scope;
+    TRYRET_NAPI(decoder->env, napi_open_handle_scope(decoder->env, &scope), AVERROR_EXTERNAL);
+
     napi_value decodeable;
-    TRYRET_NAPI(decoder->env, napi_get_reference_value(decoder->env, decoder->decodeable, &decodeable), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_get_reference_value(decoder->env, decoder->decodeable, &decodeable), err);
 
     napi_value fn;
     size_t argc;
     napi_value argv[2];
     if (whence != AVSEEK_SIZE) {
         napi_value seek;
-        TRYRET_NAPI(decoder->env, napi_create_string_utf8(decoder->env, "seek", 4, &seek), AVERROR_EXTERNAL);
+        TRYGOTO_NAPI(decoder->env, napi_create_string_utf8(decoder->env, "seek", 4, &seek), err);
 
         bool has_seek;
-        TRYRET_NAPI(decoder->env, napi_has_property(decoder->env, decodeable, seek, &has_seek), AVERROR_EXTERNAL);
+        TRYGOTO_NAPI(decoder->env, napi_has_property(decoder->env, decodeable, seek, &has_seek), err);
         if (!has_seek) {
-            return AVERROR_EXTERNAL;
+            goto err;
         }
 
-        TRYRET_NAPI(decoder->env, napi_get_property(decoder->env, decodeable, seek, &seek), AVERROR_EXTERNAL);
+        TRYGOTO_NAPI(decoder->env, napi_get_property(decoder->env, decodeable, seek, &seek), err);
         fn = seek;
         argc = 2;
-        TRYRET_NAPI(decoder->env, napi_create_int64(decoder->env, offset, &argv[0]), AVERROR_EXTERNAL);
-        TRYRET_NAPI(decoder->env, napi_create_int32(decoder->env, whence, &argv[1]), AVERROR_EXTERNAL);
+        TRYGOTO_NAPI(decoder->env, napi_create_int64(decoder->env, offset, &argv[0]), err);
+        TRYGOTO_NAPI(decoder->env, napi_create_int32(decoder->env, whence, &argv[1]), err);
     } else {
         napi_value length;
-        TRYRET_NAPI(decoder->env, napi_create_string_utf8(decoder->env, "length", 6, &length), AVERROR_EXTERNAL);
+        TRYGOTO_NAPI(decoder->env, napi_create_string_utf8(decoder->env, "length", 6, &length), err);
 
         bool has_length;
-        TRYRET_NAPI(decoder->env, napi_has_property(decoder->env, decodeable, length, &has_length), AVERROR_EXTERNAL);
+        TRYGOTO_NAPI(decoder->env, napi_has_property(decoder->env, decodeable, length, &has_length), err);
         if (!has_length) {
-            return AVERROR_EXTERNAL;
+            goto err;
         }
 
-        TRYRET_NAPI(decoder->env, napi_get_property(decoder->env, decodeable, length, &length), AVERROR_EXTERNAL);
+        TRYGOTO_NAPI(decoder->env, napi_get_property(decoder->env, decodeable, length, &length), err);
         fn = length;
         argc = 0;
     }
 
-    TRYRET_NAPI(decoder->env, napi_call_function(decoder->env, decodeable, fn, argc, argv, &fn), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_call_function(decoder->env, decodeable, fn, argc, argv, &fn), err);
     napi_valuetype type;
-    TRYRET_NAPI(decoder->env, napi_typeof(decoder->env, fn, &type), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_typeof(decoder->env, fn, &type), err);
     if (type != napi_number) {
         THROW_TYPE(decoder->env, "Seek or length did not return number");
-        return AVERROR_EXTERNAL;
+        goto err;
     }
 
-    TRYRET_NAPI(decoder->env, napi_get_value_int64(decoder->env, fn, &offset), AVERROR_EXTERNAL);
+    TRYGOTO_NAPI(decoder->env, napi_get_value_int64(decoder->env, fn, &offset), err);
+    TRYRET_NAPI(decoder->env, napi_close_handle_scope(decoder->env, scope), AVERROR_EXTERNAL);
     return offset;
+
+err:
+    TRYRET_NAPI(decoder->env, napi_close_handle_scope(decoder->env, scope), AVERROR_EXTERNAL);
+    return AVERROR_EXTERNAL;
 }
 
 static napi_value create_decoder(napi_env env, napi_callback_info info) {
@@ -176,8 +195,9 @@ static napi_value create_decoder(napi_env env, napi_callback_info info) {
 
     AVFormatContext *context = avformat_alloc_context();
     context->pb = io_context;
+    decoder->lavf_format_context = context;
 
-    TRYGOTO_NAPI(env, napi_wrap(env, this, context, finalize, decoder, NULL), err_unwrapped_alloc);
+    TRYGOTO_NAPI(env, napi_wrap(env, this, decoder, finalize, NULL, NULL), err_unwrapped_alloc);
 
     int code = avformat_open_input(&context, "", NULL, NULL);
     if (code < 0) {
