@@ -23,7 +23,7 @@ declare interface Decodable {
 /** An object capable of decoding a stream using FFmpeg */
 export class Decoder {
   /**
-   * Construct a new Decoder from a given stream
+   * Construct a new Decoder from a Decodable
    * @param decodable object to decode
    */
   constructor (decodable: Decodable)

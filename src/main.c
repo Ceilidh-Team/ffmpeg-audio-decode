@@ -29,6 +29,7 @@ typedef struct Decoder__ {
     int lavf_desired_stream;
     AVStream *lavf_stream;
 
+    AVCodec *lavf_codec;
     AVCodecContext *lavf_codec_context;
 
     AVFrame* lavf_frame;
@@ -61,7 +62,6 @@ napi_fail:;
             }
 
             if (decoder->lavf_codec_context != NULL) {
-                avcodec_close(decoder->lavf_codec_context);
                 avcodec_free_context(&decoder->lavf_codec_context);
             }
 
@@ -245,23 +245,34 @@ static napi_value decoder_read(napi_env env, napi_callback_info info) {
     decoder->env = env;
 
     if (decoder->lavf_stream == NULL) {
-        code = av_find_best_stream(decoder->lavf_format_context, AVMEDIA_TYPE_AUDIO, decoder->lavf_desired_stream, -1, NULL, 0);
-        if (code < 0) {
-            THROW(env, "Unknown stream");
+        int streams_seen = 0;
+        int streams_desired = decoder->lavf_desired_stream + 1;
+        for (int stream = 0; stream < decoder->lavf_format_context->nb_streams; ++stream) {
+            code = av_find_best_stream(decoder->lavf_format_context, AVMEDIA_TYPE_AUDIO, stream, -1, &decoder->lavf_codec, 0);
+            if (code >= 0) {
+                ++streams_seen;
+                if (streams_seen >= streams_desired) {
+                    decoder->lavf_stream = decoder->lavf_format_context->streams[code];
+                }
+            }
+        }
+
+        if (decoder->lavf_stream == NULL) {
+            THROW(env, "Unable to find stream");
             return NULL;
-        } else {
-            decoder->lavf_stream = decoder->lavf_format_context->streams[code];
+        }
+    }
+
+    if (decoder->lavf_codec == NULL) {
+        decoder->lavf_codec = avcodec_find_decoder(decoder->lavf_stream->codecpar->codec_id);
+        if (decoder->lavf_codec == NULL) {
+            THROW(env, "Failed to find codec");
+            goto err;
         }
     }
 
     if (decoder->lavf_codec_context == NULL) {
-        AVCodec *codec = avcodec_find_decoder(decoder->lavf_stream->codecpar->codec_id);
-        if (codec == NULL) {
-            THROW(env, "Failed to find codec");
-            goto err;
-        }
-
-        decoder->lavf_codec_context = avcodec_alloc_context3(codec);
+        decoder->lavf_codec_context = avcodec_alloc_context3(decoder->lavf_codec);
         code = avcodec_parameters_to_context(decoder->lavf_codec_context, decoder->lavf_stream->codecpar);
         if (code < 0) {
             avcodec_free_context(&decoder->lavf_codec_context);
@@ -270,14 +281,17 @@ static napi_value decoder_read(napi_env env, napi_callback_info info) {
         }
 
         AVDictionary *options = NULL;
-        av_dict_set(&options, "refcounted_frames", "1", 0);
-        code = avcodec_open2(decoder->lavf_codec_context, codec, &options);
+        av_dict_set_int(&options, "refcounted_frames", 1, 0);
+        code = avcodec_open2(decoder->lavf_codec_context, decoder->lavf_codec, &options);
         if (code < 0) {
             // avcodec_open2 frees context on failure
             decoder->lavf_codec_context = NULL;
+            av_dict_free(&options);
             THROW_AVERR(env, code);
             goto err;
         }
+
+        av_dict_free(&options);
     }
 
     // See https://ffmpeg.org/doxygen/trunk/group__lavc__encdec.html
